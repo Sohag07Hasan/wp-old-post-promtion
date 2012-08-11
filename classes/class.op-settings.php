@@ -33,4 +33,11 @@ class OP_options{
 	static function get_images_for_stop(){
 		return OLDPOSTPROMOTER_URL . '/images/stop.png';
 	}
+	
+	/*
+	 * return the cron url
+	 * */
+	static function get_cron_script(){
+		return 'wget ' . OLDPOSTPROMOTER_URL . '/cron/cron-oldpostpromoter.php';
+	}
 }
