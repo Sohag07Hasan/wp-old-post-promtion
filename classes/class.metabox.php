@@ -94,11 +94,12 @@ class OP_metaboxes{
 	 * import the csv data
 	 * */
 	static function import_contents($post_ID, $post){
+			
 		if(defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return;
-
+	
 		//is boolean is checking if the post is not a revision
 		if($_POST['op_upload_post_id'] == $post_ID) :
-			self::save_scheduler_info($post_ID);
+			self::save_scheduler_info($post_ID, $post);
 			self::upload_csv($post_ID);
 		endif;
 	}
@@ -107,18 +108,19 @@ class OP_metaboxes{
 	/*
 	 * It saves the scheduled date
 	 * */
-	static function save_scheduler_info($post_ID){
+	static function save_scheduler_info($post_ID, $post){
 		global $wpdb;
 		$table = Op_postpromoter::get_scheduler_table();		
 		
 		if($_POST["enable_post_promotion"] == "Y") {			
 			update_post_meta($post_ID, 'enable_post_promotion', "Y");
+			$last_imported = strtotime($post->post_date); 
 			//$wpdb->insert($table, array(''));
 			if(self::is_scheduled($post_ID, $table)){
-				$wpdb->update($table, array('interval'=>$_POST['bulk_day_interval'], 'variance'=>$_POST['bulk_day_variance']), array('post_id'=>$post_ID), array("%d", "%d"), array("%d"));
+				$wpdb->update($table, array('interval'=>$_POST['bulk_day_interval'], 'variance'=>$_POST['bulk_day_variance'], 'last_imported'=>$last_imported), array('post_id'=>$post_ID), array("%d", "%d", '%s'), array("%d"));
 			}
 			else{
-				$wpdb->insert($table, array('post_id'=>$post_ID, 'interval'=>$_POST['bulk_day_interval'], 'variance'=>$_POST['bulk_day_variance']), array("%d", "%d", "%d"));
+				$wpdb->insert($table, array('last_imported'=>$last_imported, 'post_id'=>$post_ID, 'interval'=>$_POST['bulk_day_interval'], 'variance'=>$_POST['bulk_day_variance']), array("%s", "%d", "%d", "%d"));
 			}
 		}
 		else{

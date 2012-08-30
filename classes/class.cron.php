@@ -20,12 +20,14 @@ class OP_cron_handler{
 	 */
 	static function handle_scheduler(){
 		$scheduled_posts = self::get_scheduled_posts();
+
+		
 		if(empty($scheduled_posts)) return;
 
 		$current_time = current_time('timestamp');
 		foreach ($scheduled_posts as $post){
-			$last_updated = self::get_last_modifed($post->post_id);
-			if($last_updated['status']){
+			$last_updated = $post->last_imported;
+			if($last_updated){
 				$interval = (int) $post->interval;
 				$variance = (int) $post->variance;
 				$min = 0 - $variance;
@@ -34,10 +36,10 @@ class OP_cron_handler{
 				
 				$exact_interval = $interval + $random_variance;
 				$interval_timestamp = $exact_interval * 24 * 60 * 60;
-				$total_timestamp = $interval_timestamp + $last_updated;
-				
-				if($total_timestamp > $current_time){
-					self::update_the_post($post->post_id);
+				$total_timestamp = $interval_timestamp + (int) $last_updated;
+							
+				if($total_timestamp < $current_time){
+					self::update_the_post($post);
 				}
 			}
 		}
@@ -59,13 +61,12 @@ class OP_cron_handler{
 	/*
 	 * get last modified timestamp 
 	 * */
-	static function get_last_modifed($post_id){
-		global $wpdb;
-		$mysql_time = $wpdb->get_row("SELECT * FROM $wpdb->posts WHERE ID = '$post_id' and post_status = 'publish'");
+	static function get_last_modifed($post){
+		
 		if($mysql_time){
 			$updated = array(
 				'status' => true,
-				'timstamp' => strtotime($mysql_time)
+				'timstamp' => strtotime($mysql_time->post_date)
 			);
 		}
 		else{
@@ -82,41 +83,51 @@ class OP_cron_handler{
 	/*
 	 * update the post time stamp
 	 * */
-	static function update_the_post($post_id){
+	static function update_the_post($post){
+								
 		$new_data = array(
-			'ID' => $post_id,
+			'ID' => $post->post_id,
 			'post_status' => 'publish',
 			'post_date' => current_time('mysql'),
 		);
 		
-		$additional_post_content = self::get_additional_post_content($post_id);
-		if($additional_post_content){
-			$content = $additional_post_content->content;
-			$new_data['post_content'] = $additional_post_content;
+		$additional_post_details = self::get_additional_post_details($post->post_id);
+		if($additional_post_details){
+			$content = self::get_post_content($post->post_id);
+			$new_data['post_content'] = $content . ' ' . $additional_post_details->content;
 		}
 		
-		$new_post_id = wp_insert_post($new_data);
+		$new_post_id = wp_update_post($new_data);
+		
 		if($new_post_id){
-			return self::remove_the_postcontent($additional_post_content);
+			return self::remove_the_postcontent($additional_post_details);
 		}
 	}
 	
 	
+	/*
+	 * get a post content
+	 * */
+	static function get_post_content($post_id){
+		global $wpdb;
+		return $wpdb->get_var("SELECT post_content FROM $wpdb->posts WHERE ID = '$post_id'");
+	}
+	
 	/**
 	 * returns the additional post content to add with the previous post
 	 * */
-	static function get_additional_post_content($post_id){
+	static function get_additional_post_details($post_id){
 		global $wpdb;
 		$table = Op_postpromoter::get_post_content_table();
-		return $wpdb->get_var("SELECT content FROM $table WHERE post_id = '$post_id' ORDER BY id LIMIT 1");
+		return $wpdb->get_row("SELECT * FROM $table WHERE post_id = '$post_id' ORDER BY id LIMIT 1");
 	}
 	
 	
 	/*
 	 * remove the content after updating
 	 * */
-	static function remove_the_postcontent($additional_post_content){
-		$id = $additional_post_content->id;
+	static function remove_the_postcontent($additional_post_details){
+		$id = $additional_post_details->id;
 		global $wpdb;
 		$table = Op_postpromoter::get_post_content_table();
 		

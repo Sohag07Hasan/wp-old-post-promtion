@@ -38,6 +38,6 @@ class OP_options{
 	 * return the cron url
 	 * */
 	static function get_cron_script(){
-		return 'wget ' . OLDPOSTPROMOTER_URL . '/cron/cron-oldpostpromoter.php';
+		return 'wget ' . OLDPOSTPROMOTER_URL . '/cron/cron.php';
 	}
 }

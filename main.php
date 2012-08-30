@@ -21,5 +21,6 @@ OP_options::init();
 include OLDPOSTPROMOTER_DIR . '/classes/class.metabox.php';
 OP_metaboxes::init();
 	
-
+include OLDPOSTPROMOTER_DIR . '/classes/class.cron.php';
+OP_cron_handler::init();
 ?>
